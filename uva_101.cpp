@@ -2,12 +2,13 @@
  * Title: The Blocks Problem
  * Language: C++11
  * Author: 林煜凱 (Lin, Yu-Kai)
- * Solved Date:
+ * Solved Date: Mar. 30, 2018
  ************************************************************/
 
 #include <cstdio>
 #include <cstring>
 #include <cinttypes>
+#include <algorithm>
 #include <vector>
 #include <list>
 
@@ -23,11 +24,12 @@ class Chain {
         void moveOver(uint8_t a, uint8_t b);
         void pileOnto(uint8_t a, uint8_t b);
         void pileOver(uint8_t a, uint8_t b);
-        void clearTop(uint8_t n);
         void print();
-        bool isTheSameStack(uint8_t a, uint8_t b);
+        bool isOnSameStack(uint8_t a, uint8_t b);
 
     private:
+        void _clearAbove(uint8_t n);
+
         vector<list<uint8_t> > _chain;
         vector<uint8_t> _pos;
 };
@@ -45,12 +47,12 @@ int main() {
         if (strcmp(verb, "quit") == 0) break;
 
         scanf("%" SCNu8 " %s %" SCNu8, &a, prep, &b);
-        if ((a == b) || chain.isTheSameStack(a, b)) continue;
+        if ((a == b) || chain.isOnSameStack(a, b)) continue;
 
         if (strcmp(verb, "move") == 0) {
             if (strcmp(prep, "onto") == 0) chain.moveOnto(a, b);
             else chain.moveOver(a, b);
-        } else if (strcmp(verb, "pile") == 0) {
+        } else {
             if (strcmp(prep, "onto") == 0) chain.pileOnto(a, b);
             else chain.pileOver(a, b);
         }
@@ -69,62 +71,56 @@ Chain::Chain(uint8_t s): _chain(s), _pos(s, 0) {
 }
 
 void Chain::moveOnto(uint8_t a, uint8_t b) {
-    clearTop(b);
+    _clearAbove(b);
     moveOver(a, b);
 }
 
 void Chain::moveOver(uint8_t a, uint8_t b) {
-    clearTop(a);
-
-    _chain[_pos[a]].pop_back();
-    _chain[_pos[b]].push_back(a);
-    _pos[a] = _pos[b];
+    _clearAbove(a);
+    pileOver(a, b);
 }
 
 void Chain::pileOnto(uint8_t a, uint8_t b) {
-    clearTop(b);
+    _clearAbove(b);
     pileOver(a, b);
 }
 
 void Chain::pileOver(uint8_t a, uint8_t b) {
-    list<uint8_t> &from = _chain[_pos[a]], &to = _chain[_pos[b]];
-    list<uint8_t>::iterator it = from.begin();
+    list<uint8_t> &fromBlocks = _chain[_pos[a]];
+    list<uint8_t> &toBlocks = _chain[_pos[b]];
+    list<uint8_t>::iterator it =
+        std::find(fromBlocks.begin(), fromBlocks.end(), a);
 
-    while (*it != a) ++it;
-    to.splice(to.end(), from, it, from.end());
-    for (; it != to.end(); ++it) _pos[*it] = _pos[b];
-}
-
-void Chain::clearTop(uint8_t n) {
-    list<uint8_t> &blocks = _chain[_pos[n]];
-    uint8_t i = blocks.back();
-
-    while (i != n) {
-        _pos[i] = i;
-        _chain[i].push_back(i);
-
-        blocks.pop_back();
-        i = blocks.back();
-    }
+    toBlocks.splice(toBlocks.end(), fromBlocks, it, fromBlocks.end());
+    for (; it != toBlocks.end(); ++it) _pos[*it] = _pos[b];
 }
 
 void Chain::print() {
-    size_t size = _chain.size();
-
-    for (size_t i = 0; i < size; ++i) {
+    for (size_t i = 0; i < _chain.size(); ++i) {
         printf("%lu:", i);
 
         list<uint8_t>::const_iterator cit = _chain[i].cbegin();
-        list<uint8_t>::const_iterator end = _chain[i].cend();
 
-        while (cit != end) {
+        while (cit != _chain[i].cend()) {
             printf(" %" PRIu8, *cit);
             ++cit;
         }
-        printf("\n");
+        putchar('\n');
     }
 }
 
-bool Chain::isTheSameStack(uint8_t a, uint8_t b) {
+bool Chain::isOnSameStack(uint8_t a, uint8_t b) {
     return _pos[a] == _pos[b];
+}
+
+void Chain::_clearAbove(uint8_t n) {
+    list<uint8_t> &blocks = _chain[_pos[n]];
+
+    while (blocks.back() != n) {
+        uint8_t i = blocks.back();
+
+        _pos[i] = i;
+        _chain[i].push_back(i);
+        blocks.pop_back();
+    }
 }
